@@ -25,11 +25,18 @@ class Plugin extends \MapasCulturais\Plugin
             $this->part('button-download-files-registrations', ['entity' => $entity]);
         });
 
+        $app->hook("template(registration.view.single-tab):begin", function () {
+            $entity = $this->controller->requestedEntity;
+            $this->part('button-download-registration', ['entity' => $entity ]);
+        });
+
         $app->hook('GET(opportunity.registrationsDownload)', function () use ($self, $app) {
             ini_set('max_execution_time', '0');
             /** @var ControllersOpportunity $this */
             $this->requireAuthentication();
             $opportunity = $app->repo('Opportunity')->find($this->data['entity']);
+            
+
             if(!$opportunity) {
                 $app->pass();
             }
@@ -37,10 +44,24 @@ class Plugin extends \MapasCulturais\Plugin
             $repository = $app->repo('Registration');
             $queryBuilder = $repository->createQueryBuilder('r');
 
-            $queryBuilder
-                ->select('r.id') 
-                ->where('r.opportunity = :opportunity')
-                ->setParameter('opportunity', $opportunity->id);
+            if (isset($this->data['registrationId'])) {
+                $registrationId = $this->data['registrationId'];
+                $queryBuilder
+                    ->select('r.id') 
+                    ->where('r.opportunity = :opportunity')
+                    ->andWhere('r.id = :id')
+                    ->setParameter('opportunity', $opportunity->id)
+                    ->setParameter('id', $registrationId);
+
+                    $zipFileName = "opportunity-$opportunity->id-registration-$registrationId-files.zip";
+            } else {
+                $queryBuilder
+                    ->select('r.id') 
+                    ->where('r.opportunity = :opportunity')
+                    ->setParameter('opportunity', $opportunity->id);
+
+                    $zipFileName = "opportunity-$opportunity->id-registrations-files.zip";
+            }
 
             $result = $queryBuilder->getQuery()->getResult();
 
@@ -50,7 +71,7 @@ class Plugin extends \MapasCulturais\Plugin
             $opportunity->checkPermission('@control');
 
             $zip = new \ZipArchive();
-            $zipFileName = "opportunity-$opportunity->id-registrations-files.zip";
+
             $baseDir = PRIVATE_FILES_PATH . 'registration';
 
             if ($zip->open($zipFileName, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
@@ -73,8 +94,6 @@ class Plugin extends \MapasCulturais\Plugin
             readfile($zipFileName);
 
             unlink($zipFileName);
-
-            
         });
 
     }
