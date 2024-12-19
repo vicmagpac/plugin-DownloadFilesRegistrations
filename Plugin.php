@@ -81,7 +81,7 @@ class Plugin extends \MapasCulturais\Plugin
             foreach ($registrations as $id) {
                 $dirPath = $baseDir . DIRECTORY_SEPARATOR . $id;
                 if (is_dir($dirPath)) {
-                    $self->addFilesToZip($dirPath, $zip, $id);
+                    $self->addFilesToZip($dirPath, $zip);
                 }
             }
 
@@ -106,10 +106,14 @@ class Plugin extends \MapasCulturais\Plugin
             $filePath = $dir . DIRECTORY_SEPARATOR . $file;
             $zipPath = $relativePath . DIRECTORY_SEPARATOR . $file;
             
+            // Verifica se o arquivo é um diretório
             if (is_dir($filePath)) {
                 $this->addFilesToZip($filePath, $zip, $zipPath);
             } else {
-                $zip->addFile($filePath, ltrim($zipPath, DIRECTORY_SEPARATOR));
+                // Adiciona apenas arquivos com extensão .zip
+                if (pathinfo($filePath, PATHINFO_EXTENSION) === 'zip') {
+                    $zip->addFile($filePath, ltrim($zipPath, DIRECTORY_SEPARATOR));
+                }
             }
         }
     }
